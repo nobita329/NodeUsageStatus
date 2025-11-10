@@ -56,7 +56,6 @@ fi
 
 
 # Go dependencies इंस्टॉल करो
-cd /srv/wings
 go get github.com/shirou/gopsutil/v3/cpu
 go get github.com/shirou/gopsutil/v3/disk
 go get github.com/shirou/gopsutil/v3/mem
