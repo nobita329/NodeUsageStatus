@@ -56,10 +56,15 @@ fi
 
 
 # Go dependencies इंस्टॉल करो
-go get github.com/shirou/gopsutil/v3/cpu
-go get github.com/shirou/gopsutil/v3/disk
-go get github.com/shirou/gopsutil/v3/mem
-go get github.com/shirou/gopsutil/v3/net
+export PATH=/usr/local/go/bin:$PATH
+echo 'export PATH=/usr/local/go/bin:$PATH' >> ~/.bashrc
+
+cd /srv/wings
+go get github.com/shirou/gopsutil/cpu
+go get github.com/shirou/gopsutil/disk
+go get github.com/shirou/gopsutil/mem
+go get github.com/shirou/gopsutil/net
+
 
 # Wings को rebuild और restart करो
 systemctl stop wings && \
