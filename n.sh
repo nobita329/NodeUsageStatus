@@ -39,18 +39,21 @@ else
 fi
 
 
-# अगर 1.zip वर्तमान डायरेक्टरी में है तो उसे मूव और अनज़िप करो
-if [ -f ~/1.zip ]; then
-    mv ~/1.zip /srv/wings/
+# Move router_node_stats.go and metrics.go
+if [ -f "router_node_stats.go" ]; then
+    mv router_node_stats.go /srv/wings/router/
+    echo "✅ router_node_stats.go moved to /srv/wings/router/"
+else
+    echo "❌ router_node_stats.go not found"
 fi
 
-if [ -f /srv/wings/1.zip ]; then
-    cd /srv/wings
-    unzip -o 1.zip
-    rm -f 1.zip
+if [ -f "metrics.go" ]; then
+    mv metrics.go /srv/wings/system/
+    echo "✅ metrics.go moved to /srv/wings/system/"
 else
-    echo "⚠️ 1.zip नहीं मिला, स्किप किया जा रहा है"
+    echo "❌ metrics.go not found"
 fi
+
 
 # Go dependencies इंस्टॉल करो
 cd /srv/wings
