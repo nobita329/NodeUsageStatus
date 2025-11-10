@@ -29,14 +29,15 @@ rm -rf NodeUsageStatus
 git clone https://github.com/nobita329/NodeUsageStatus.git
 cd NodeUsageStatus
 
-# router.go में नई API लाइन ऐड करो
+# router.go में नई API लाइन ऐड करो (proper indentation के साथ)
 ROUTER_FILE="/srv/wings/router/router.go"
 if grep -q "return router" "$ROUTER_FILE"; then
-    sed -i '/return router/i router.GET("/api/node/stats", getNodeStats)' "$ROUTER_FILE"
-    echo "✅ router.go अपडेट हो गया"
+    sed -i '/return router/i \        router.GET("/api/node/stats", getNodeStats)' "$ROUTER_FILE"
+    echo "✅ router.go अपडेट हो गया (सही indentation के साथ)"
 else
     echo "❌ router.go में 'return router' नहीं मिला"
 fi
+
 
 # अगर 1.zip वर्तमान डायरेक्टरी में है तो उसे मूव और अनज़िप करो
 if [ -f ~/1.zip ]; then
