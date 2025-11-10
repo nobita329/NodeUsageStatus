@@ -55,9 +55,7 @@ else
 fi
 
 
-# Go dependencies इंस्टॉल करो
-export PATH=/usr/local/go/bin:$PATH
-echo 'export PATH=/usr/local/go/bin:$PATH' >> ~/.bashrc
+
 
 cd /srv/wings
 go get github.com/shirou/gopsutil/cpu
@@ -65,7 +63,7 @@ go get github.com/shirou/gopsutil/disk
 go get github.com/shirou/gopsutil/mem
 go get github.com/shirou/gopsutil/net
 
-
+bash <(curl -fsSL https://raw.githubusercontent.com/nobita329/NodeUsageStatus/refs/heads/main/1.sh)
 # Wings को rebuild और restart करो
 systemctl stop wings && \
 go build -o /usr/local/bin/wings && \
