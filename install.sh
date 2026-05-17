@@ -4,6 +4,39 @@ set -e
 WINGSDIR="/srv/wings"
 BINARY="/usr/local/bin/wings"
 CUSTOM_ZIP="https://files.catbox.moe/xf9zxo.zip"
+ARCH=$(uname -m)
+case "$ARCH" in
+    x86_64)  GOARCH="amd64" ;;
+    aarch64) GOARCH="arm64" ;;
+    *)       GOARCH="$ARCH"  ;;
+esac
+
+install_pkgs() {
+    if command -v apt &>/dev/null; then
+        apt update && apt install -y "$@"
+    elif command -v dnf &>/dev/null; then
+        dnf install -y "$@"
+    elif command -v yum &>/dev/null; then
+        yum install -y "$@"
+    elif command -v zypper &>/dev/null; then
+        zypper install -y "$@"
+    elif command -v pacman &>/dev/null; then
+        pacman -Syu --noconfirm "$@"
+    elif command -v apk &>/dev/null; then
+        apk add "$@"
+    else
+        echo "[!] No supported package manager found. Install manually: $*"
+    fi
+}
+
+ensure_deps() {
+    for cmd in curl unzip bc; do
+        if ! command -v "$cmd" &>/dev/null; then
+            echo "[*] Installing $cmd..."
+            install_pkgs "$cmd"
+        fi
+    done
+}
 
 show_help() {
     echo "Usage: $0 {auto|manu|uninstall}"
@@ -16,6 +49,7 @@ show_help() {
 
 auto_install() {
     echo "[*] Auto install: Downloading, patching, building & installing Wings..."
+    ensure_deps
     download_and_patch
     build_and_install
     restart_service
@@ -24,6 +58,7 @@ auto_install() {
 
 manual_install() {
     echo "[*] Manual install: Downloading & patching Wings source..."
+    ensure_deps
     download_and_patch
     echo ""
     echo "[+] Source ready at: $SRC_DIR"
@@ -35,6 +70,7 @@ manual_install() {
 }
 
 download_and_patch() {
+    ensure_go
     mkdir -p "$WINGSDIR"
     cd "$WINGSDIR"
 
@@ -82,17 +118,32 @@ router.GET("/api/node/stats", getNodeStats)
 
     if ! grep -q 'gopsutil' go.mod; then
         echo "[*] Adding gopsutil dependency..."
-        go get github.com/shirou/gopsutil@v3.21.10+incompatible 2>/dev/null
-        go mod tidy
+        go mod edit -require github.com/shirou/gopsutil@v3.21.10+incompatible
+        go mod tidy >/dev/null 2>&1 || true
+    fi
+}
+
+ensure_go() {
+    if command -v go &>/dev/null; then
+        CURVER=$(go version | grep -oP 'go[0-9]+\.[0-9]+' | tr -d go)
+    else
+        CURVER="0.0"
+    fi
+
+    if [ "$(echo "$CURVER < 1.25" | bc 2>/dev/null || echo 1)" = 1 ]; then
+        echo "[*] Installing Go 1.25+ from golang.org..."
+        LATEST_VER=$(curl -s https://go.dev/dl/ | grep -oP "go[0-9]+\.[0-9]+\.[0-9]+\.linux-${GOARCH}\.tar\.gz" | head -1 | sed "s/\.linux-${GOARCH}\.tar\.gz//")
+        curl -L "https://go.dev/dl/${LATEST_VER}.linux-${GOARCH}.tar.gz" -o /tmp/go.tar.gz
+        rm -rf /usr/local/go
+        tar -C /usr/local -xzf /tmp/go.tar.gz
+        ln -sf /usr/local/go/bin/go /usr/local/bin/go
+        rm -f /tmp/go.tar.gz
+        hash -r 2>/dev/null || true
     fi
 }
 
 build_and_install() {
-    if ! command -v go &>/dev/null; then
-        echo "[*] Go not found, installing..."
-        apt update
-        apt install -y golang-go
-    fi
+    ensure_go
     go version
     echo "[*] Building Wings..."
     go build -o "$BINARY"
@@ -101,15 +152,20 @@ build_and_install() {
 }
 
 restart_service() {
-    systemctl daemon-reload 2>/dev/null || true
-    systemctl enable wings 2>/dev/null || true
-    systemctl restart wings 2>/dev/null || echo "[!] Could not restart wings service (may not exist)"
-    systemctl is-active wings 2>/dev/null && echo "[*] wings service is active"
+    if command -v systemctl &>/dev/null; then
+        systemctl daemon-reload 2>/dev/null || true
+        systemctl enable wings 2>/dev/null || true
+        systemctl restart wings 2>/dev/null || echo "[!] Could not restart wings service (may not exist)"
+        systemctl is-active wings 2>/dev/null && echo "[*] wings service is active"
+    else
+        echo "[!] systemctl not found - no systemd detected. Restart wings manually."
+    fi
 }
 
 uninstall() {
-    echo "[*] Uninstalling custom Wings..."
-    systemctl stop wings 2>/dev/null || true
+    if command -v systemctl &>/dev/null; then
+        systemctl stop wings 2>/dev/null || true
+    fi
 
     if [ -f "$BINARY" ]; then
         echo "[*] Removing $BINARY"
